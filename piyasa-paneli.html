@@ -967,7 +967,6 @@ const CARDS = [
   { key:'uranium',label:'URANYUM',      source:'yahoo',    symbol:'UX=F',     fmt:'usd2',    fallback:{price:78.50, chg:0.65} },
 ];
 
-const PROXY = 'https://api.allorigins.win/raw?url=';
 const grid = document.getElementById('grid');
 const state = {};
 
@@ -1028,8 +1027,7 @@ function renderCard(cfg, price, chgPct, stale){
 
 async function fetchYahoo(symbol){
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
-  const res = await fetch(PROXY + encodeURIComponent(url));
-  if(!res.ok) throw new Error('yahoo fetch failed');
+  const res = await fetchWithFallback(url);
   const data = await res.json();
   const result = data.chart.result[0];
   const meta = result.meta;
@@ -1041,8 +1039,7 @@ async function fetchYahoo(symbol){
 
 async function fetchFred(seriesId){
   const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${seriesId}`;
-  const res = await fetch(PROXY + encodeURIComponent(url));
-  if(!res.ok) throw new Error('fred fetch failed');
+  const res = await fetchWithFallback(url);
   const text = await res.text();
   const lines = text.trim().split('\n').slice(1);
   const clean = lines.filter(l => !l.trim().endsWith(',.') && l.trim().length>0);
@@ -1156,8 +1153,10 @@ async function loadChart(cfg, period){
     loadingEl.style.display = 'none';
     if(!points || points.length < 2){
       emptyEl.style.display = 'flex';
+      lastChartPoints = null;
       return;
     }
+    lastChartPoints = points;
     drawChart(svgEl, points);
   }catch(e){
     loadingEl.style.display = 'none';
@@ -1170,7 +1169,7 @@ async function fetchHistory(cfg, period){
     const interval = period === 'daily' ? '1d' : '1wk';
     const range = period === 'daily' ? '1mo' : '1y';
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cfg.symbol)}?range=${range}&interval=${interval}`;
-    const res = await fetch(PROXY + encodeURIComponent(url));
+    const res = await fetchWithFallback(url);
     const data = await res.json();
     const result = data.chart.result[0];
     const ts = result.timestamp || [];
@@ -1195,7 +1194,7 @@ async function fetchHistory(cfg, period){
       ? new Date(Date.now() - 45*24*3600*1000).toISOString().slice(0,10)
       : new Date(Date.now() - 450*24*3600*1000).toISOString().slice(0,10);
     const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${cfg.symbol}&cosd=${cosd}`;
-    const res = await fetch(PROXY + encodeURIComponent(url));
+    const res = await fetchWithFallback(url);
     const text = await res.text();
     const lines = text.trim().split('\n').slice(1);
     let pts = lines
@@ -1212,7 +1211,10 @@ async function fetchHistory(cfg, period){
 }
 
 function drawChart(svgEl, points){
-  const W = 600, H = 200, PAD_L = 44, PAD_R = 10, PAD_T = 14, PAD_B = 22;
+  const box = svgEl.parentElement.getBoundingClientRect();
+  const W = Math.max(Math.round(box.width), 300);
+  const H = Math.max(Math.round(box.height), 160);
+  const PAD_L = 56, PAD_R = 14, PAD_T = 16, PAD_B = 24;
   const vals = points.map(p=>p.v);
   const min = Math.min(...vals);
   const max = Math.max(...vals);
@@ -1236,16 +1238,27 @@ function drawChart(svgEl, points){
   }).join('');
 
   svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svgEl.setAttribute('preserveAspectRatio', 'none');
   svgEl.innerHTML = `
     ${gridLines}
     <path d="${areaPath}" fill="${fillColor}" stroke="none"/>
     <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="1.8"/>
     <text class="axis-label" x="${PAD_L}" y="${H-6}" text-anchor="start">${fmtDate(points[0].t)}</text>
     <text class="axis-label" x="${W-PAD_R}" y="${H-6}" text-anchor="end">${fmtDate(points[points.length-1].t)}</text>
-    <text class="axis-label" x="${PAD_L-6}" y="${PAD_T+4}" text-anchor="end">${max.toLocaleString('tr-TR',{maximumFractionDigits:2})}</text>
-    <text class="axis-label" x="${PAD_L-6}" y="${H-PAD_B}" text-anchor="end">${min.toLocaleString('tr-TR',{maximumFractionDigits:2})}</text>
+    <text class="axis-label" x="${PAD_L-8}" y="${PAD_T+4}" text-anchor="end">${max.toLocaleString('tr-TR',{maximumFractionDigits:2})}</text>
+    <text class="axis-label" x="${PAD_L-8}" y="${H-PAD_B}" text-anchor="end">${min.toLocaleString('tr-TR',{maximumFractionDigits:2})}</text>
   `;
 }
+
+let lastChartPoints = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(window._chartResizeTimer);
+  window._chartResizeTimer = setTimeout(()=>{
+    if(lastChartPoints){
+      drawChart(document.getElementById('chartSvg'), lastChartPoints);
+    }
+  }, 200);
+});
 
 // ---------- Güncel Haberler ----------
 const NEWS_FEEDS = [
@@ -1278,16 +1291,38 @@ async function fetchWithFallback(url){
 }
 
 async function fetchNews(query){
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=tr&gl=TR&ceid=TR:tr`;
-  const res = await fetchWithFallback(url);
-  const text = await res.text();
-  const xml = new DOMParser().parseFromString(text, 'text/xml');
-  const items = Array.from(xml.querySelectorAll('item')).slice(0, 4);
-  return items.map(it => ({
-    title: it.querySelector('title')?.textContent || '',
-    link: it.querySelector('link')?.textContent || '#',
-    source: it.querySelector('source')?.textContent || '',
-  }));
+  const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=tr&gl=TR&ceid=TR:tr`;
+
+  // 1) rss2json: RSS'i doğrudan JSON'a çevirir, CORS sorunu yaşamaz.
+  try{
+    const r2jUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+    const res = await fetch(r2jUrl);
+    const data = await res.json();
+    if(data && data.status === 'ok' && Array.isArray(data.items) && data.items.length){
+      return data.items.slice(0, 4).map(it => ({
+        title: (it.title || '').split(' - ').slice(0, -1).join(' - ') || it.title || '',
+        link: it.link || '#',
+        source: it.author || (it.title || '').split(' - ').pop() || '',
+      }));
+    }
+  }catch(e){ /* alttaki yönteme düş */ }
+
+  // 2) Yedek: ham RSS XML, proxy zinciri üzerinden
+  try{
+    const res = await fetchWithFallback(feedUrl);
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 4);
+    if(items.length){
+      return items.map(it => ({
+        title: it.querySelector('title')?.textContent || '',
+        link: it.querySelector('link')?.textContent || '#',
+        source: it.querySelector('source')?.textContent || '',
+      }));
+    }
+  }catch(e){ /* aşağıda boş döner */ }
+
+  return [];
 }
 
 function fallbackNewsLink(query){
