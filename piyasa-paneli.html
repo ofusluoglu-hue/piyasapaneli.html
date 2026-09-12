@@ -1058,7 +1058,17 @@ async function fetchCoingecko(ids){
   return res.json();
 }
 
-async function refreshAll(){
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+async function refreshCrypto(){
+  const cgData = await fetchCoingecko(['bitcoin','ethereum']);
+  CARDS.filter(c=>c.source==='coingecko').forEach(cfg=>{
+    const d = cgData[cfg.symbol];
+    if(d) renderCard(cfg, d.usd, d.usd_24h_change, false);
+  });
+}
+
+async function refreshMarketData(){
   const dot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
   dot.className = 'dot loading';
@@ -1067,20 +1077,16 @@ async function refreshAll(){
   let anyError = false;
   let lastErrorMsg = '';
 
-  // Coingecko batch first
-  let cgData = null;
   try{
-    cgData = await fetchCoingecko(['bitcoin','ethereum']);
+    await refreshCrypto();
   }catch(e){ anyError = true; lastErrorMsg = e.message || String(e); }
 
-  await Promise.all(CARDS.map(async cfg=>{
+  // Yahoo/FRED kaynaklı kartları aynı anda değil, aralıklı (kademeli) çekiyoruz —
+  // ücretsiz CORS proxy'leri eş zamanlı yoğun istekte otomatik engelleme yapabiliyor.
+  const marketCards = CARDS.filter(c => c.source === 'yahoo' || c.source === 'fred');
+  for(const cfg of marketCards){
     try{
-      if(cfg.source === 'coingecko'){
-        if(!cgData) throw new Error('no cg data');
-        const d = cgData[cfg.symbol];
-        if(!d) throw new Error('missing coin');
-        renderCard(cfg, d.usd, d.usd_24h_change, false);
-      } else if(cfg.source === 'yahoo'){
+      if(cfg.source === 'yahoo'){
         const { price, chgPct } = await fetchYahoo(cfg.symbol);
         renderCard(cfg, price, chgPct, false);
       } else if(cfg.source === 'fred'){
@@ -1092,7 +1098,8 @@ async function refreshAll(){
       lastErrorMsg = e.message || String(e);
       renderCard(cfg, cfg.fallback.price, cfg.fallback.chg, true);
     }
-  }));
+    await sleep(350); // istekler arasına kısa bir bekleme koyuyoruz
+  }
 
   if(location.protocol === 'file:'){
     document.getElementById('fileWarning').style.display = 'block';
@@ -1105,6 +1112,10 @@ async function refreshAll(){
     dot.className = 'dot';
     statusText.textContent = 'Canlı · güncellendi ' + new Date().toLocaleTimeString('tr-TR');
   }
+}
+
+async function refreshAll(){
+  await refreshMarketData();
 }
 
 function manualRefresh(){
@@ -1369,7 +1380,8 @@ if(location.protocol === 'file:'){
   document.getElementById('fileWarning').style.display = 'block';
 }
 refreshAll();
-setInterval(refreshAll, 10000);
+setInterval(refreshCrypto, 10000);
+setInterval(refreshAll, 45000);
 loadNews();
 setInterval(loadNews, 300000);
 openChart('btc');
