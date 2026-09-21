@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Günlük Özet</title>
+<style>
+  :root{
+    --bg:#0A0D12;
+    --panel:#12161D;
+    --panel-2:#161B23;
+    --border:#212832;
+    --text:#EDEFF2;
+    --muted:#7C8695;
+    --muted-2:#565F6C;
+    --up:#33C07C;
+    --down:#FF5C5C;
+    --amber:#E7A83B;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:1400px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  .layout{
+    display:flex;
+    align-items:flex-start;
+    gap:20px;
+  }
+  .sidebar{
+    width:230px;
+    flex:0 0 230px;
+  }
+  .main{
+    flex:1;
+    min-width:0;
+  }
+  @media (max-width:900px){
+    .layout{flex-direction:column;}
+    .sidebar{width:100%;flex:none;}
+    .main{width:100%;}
+  }
+  .nav-panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:8px;
+    position:sticky;
+    top:20px;
+  }
+  .nav-item{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:11px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+    border-left:2px solid transparent;
+    transition:background .15s, color .15s;
+  }
+  .nav-item + .nav-item{margin-top:2px;}
+  .nav-item svg{
+    width:17px;height:17px;
+    flex-shrink:0;
+    opacity:.85;
+  }
+  .nav-item:hover{
+    background:#171c25;
+    color:var(--text);
+  }
+  .nav-item.active{
+    background:#1a212b;
+    color:var(--text);
+    border-left:2px solid var(--amber);
+  }
+  .nav-item.active svg{opacity:1;stroke:var(--amber);}
+
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .sidebar-panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px 17px;
+  }
+  .sidebar-title{
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .sidebar-caption{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-bottom:14px;
+  }
+  .sidebar-empty{
+    font-size:12px;
+    color:var(--muted-2);
+    line-height:1.6;
+    padding:10px 0;
+  }
+  .debt-list{display:flex;flex-direction:column;}
+  .debt-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:8px;
+    padding:9px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .debt-row:last-child{border-bottom:none;}
+  .debt-label{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .debt-value{
+    font-size:13px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    text-align:right;
+  }
+  .debt-row.total{
+    margin-top:2px;
+    padding-top:12px;
+    border-top:1px solid #2a3140;
+    border-bottom:none;
+  }
+  .debt-row.total .debt-label{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .debt-row.total .debt-value{
+    font-size:16px;
+    color:var(--down);
+  }
+  .debt-row .debt-value.neg{color:var(--down);}
+  .debt-asof{
+    font-size:10.5px;
+    color:var(--muted-2);
+    margin-top:12px;
+  }
+
+  .page-head{margin-bottom:20px;}
+  .page-head h1{
+    font-size:20px;
+    font-weight:700;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  .page-head p{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+  }
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:12px;
+    margin-bottom:22px;
+  }
+  @media (max-width:900px){
+    .summary-grid{grid-template-columns:repeat(2, 1fr);}
+  }
+  .summary-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px 17px;
+  }
+  .summary-label{
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .summary-value{
+    font-size:21px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  .summary-value.pos{color:var(--up);}
+  .summary-value.neg{color:var(--down);}
+  .summary-sub{
+    font-size:11.5px;
+    color:var(--muted-2);
+    margin-top:6px;
+  }
+
+  .section-panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px 20px;
+    margin-bottom:16px;
+  }
+  .section-title{
+    font-size:14px;
+    font-weight:700;
+    margin-bottom:14px;
+  }
+  .table-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .table-row:last-child{border-bottom:none;}
+  .table-row .r-label{color:var(--text);font-weight:600;}
+  .table-row .r-sub{color:var(--muted-2);font-size:11px;margin-top:2px;}
+  .table-row .r-value{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
+  .table-row .r-value.muted{font-weight:500;color:var(--muted);}
+
+  .bar-row{margin-bottom:14px;}
+  .bar-row:last-child{margin-bottom:0;}
+  .bar-head{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    margin-bottom:6px;
+  }
+  .bar-head .name{color:var(--text);font-weight:600;}
+  .bar-head .val{color:var(--muted);font-variant-numeric:tabular-nums;}
+  .bar-track{
+    height:7px;
+    border-radius:4px;
+    background:#1b212a;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    border-radius:4px;
+    background:var(--amber);
+  }
+
+  .goal-item{
+    display:flex;
+    gap:10px;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .goal-item:last-child{border-bottom:none;}
+  .goal-owner{
+    flex:0 0 60px;
+    color:var(--muted-2);
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    padding-top:1px;
+  }
+  .goal-text{color:var(--text);line-height:1.5;}
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+  }
+  .title-block h1{
+    font-size:20px;
+    font-weight:700;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  .title-block p{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .status{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--up);
+    box-shadow:0 0 0 3px rgba(51,192,124,0.15);
+    transition:background .2s, box-shadow .2s;
+  }
+  .dot.err{
+    background:var(--down);
+    box-shadow:0 0 0 3px rgba(255,92,92,0.15);
+  }
+  .dot.loading{
+    background:var(--amber);
+    box-shadow:0 0 0 3px rgba(231,168,59,0.15);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.35;}
+  }
+  .refresh-btn{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:12.5px;
+    padding:7px 12px;
+    border-radius:7px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, background .15s;
+  }
+  .refresh-btn:hover{
+    border-color:#333d4a;
+    background:#1a2029;
+  }
+  .refresh-btn svg{
+    width:13px;height:13px;
+    transition:transform .5s ease;
+  }
+  .refresh-btn.spinning svg{
+    transform:rotate(360deg);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:12px;
+  }
+  @media (max-width:980px){
+    .grid{grid-template-columns:repeat(3, 1fr);}
+  }
+  @media (max-width:560px){
+    .grid{grid-template-columns:repeat(2, 1fr);}
+    .wrap{padding:20px 14px 40px;}
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-left:3px solid var(--border);
+    border-radius:10px;
+    padding:14px 15px 13px;
+    min-height:96px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:10px;
+    transition:border-left-color .3s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  .card.up{border-left-color:var(--up);}
+  .card.down{border-left-color:var(--down);}
+
+  .card-label{
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .stale-tag{
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:.02em;
+    text-transform:none;
+    color:var(--muted-2);
+    background:#1c222b;
+    border:1px solid var(--border);
+    padding:1px 5px;
+    border-radius:4px;
+  }
+
+  .card-value{
+    font-size:22px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-0.01em;
+    color:var(--text);
+    line-height:1.1;
+    min-height:26px;
+  }
+  .card-value.skeleton{
+    color:transparent;
+    background:linear-gradient(90deg,#1a1f27 25%,#232a34 37%,#1a1f27 63%);
+    background-size:400% 100%;
+    animation:shimmer 1.4s ease infinite;
+    border-radius:5px;
+    display:inline-block;
+    width:70%;
+  }
+  @keyframes shimmer{
+    0%{background-position:100% 50%;}
+    100%{background-position:0 50%;}
+  }
+
+  .card-change{
+    font-size:12.5px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .card-change.up{color:var(--up);}
+  .card-change.down{color:var(--down);}
+  .card-change.flat{color:var(--muted);}
+  .arrow{font-size:10px;line-height:1;}
+
+  /* ---- VIX rejim rozeti ve not ---- */
+  .regime-badge{
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    padding:2.5px 8px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .regime-badge.calm{
+    color:#8FE3BC;
+    background:rgba(51,192,124,0.14);
+    border:1px solid rgba(51,192,124,0.35);
+  }
+  .regime-badge.normal{
+    color:#8FB4FF;
+    background:rgba(108,142,239,0.16);
+    border:1px solid rgba(108,142,239,0.4);
+  }
+  .regime-badge.fear{
+    color:#F4C871;
+    background:rgba(231,168,59,0.16);
+    border:1px solid rgba(231,168,59,0.42);
+  }
+  .regime-badge.panic{
+    color:#FF9494;
+    background:rgba(255,92,92,0.16);
+    border:1px solid rgba(255,92,92,0.42);
+  }
+  .card-note{
+    font-size:11.5px;
+    line-height:1.5;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .card.has-note{min-height:150px;}
+  .card.has-note .card-value{font-size:20px;}
+  .card-value.calm{color:#8FE3BC;}
+  .card-value.normal{color:#8FB4FF;}
+  .card-value.fear{color:#F4C871;}
+  .card-value.panic{color:#FF9494;}
+
+  .footnote{
+    margin-top:22px;
+    font-size:11.5px;
+    color:var(--muted-2);
+    line-height:1.6;
+  }
+  .footnote b{color:var(--muted);}
+
+  .file-warning{
+    background:#2a1f12;
+    border:1px solid #4a3319;
+    color:#f0b458;
+    padding:12px 15px;
+    border-radius:9px;
+    font-size:12.5px;
+    line-height:1.6;
+    margin-bottom:18px;
+    display:none;
+  }
+  .file-warning b{color:#ffd27a;}
+  .file-warning code{
+    background:#1c150c;
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:11.5px;
+  }
+
+  .card{cursor:pointer;}
+  .card.selected{
+    border-color:#3a4453;
+    box-shadow:0 0 0 1px #3a4453 inset;
+  }
+  .card:hover{border-color:#2b3340;}
+
+  .chart-panel{
+    margin-top:20px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px 20px 16px;
+  }
+  .chart-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .chart-title-row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .chart-title{
+    font-size:15px;
+    font-weight:700;
+  }
+  .chart-sub{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .chart-controls{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .period-toggle{
+    display:flex;
+    background:#161B23;
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:2px;
+  }
+  .period-btn{
+    border:none;
+    background:transparent;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:600;
+    padding:5px 11px;
+    border-radius:5px;
+    cursor:pointer;
+  }
+  .period-btn.active{
+    background:#242c38;
+    color:var(--text);
+  }
+  .chart-close{
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    color:var(--muted);
+    width:26px;height:26px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .chart-close:hover{color:var(--text);border-color:#333d4a;}
+
+  .chart-body{
+    position:relative;
+    height:200px;
+  }
+  .chart-body svg{width:100%;height:100%;display:block;}
+  .chart-loading{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted);
+    font-size:12.5px;
+  }
+  .chart-empty{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted-2);
+    font-size:12.5px;
+    text-align:center;
+    padding:0 30px;
+  }
+  .axis-label{
+    fill:var(--muted-2);
+    font-size:10px;
+    font-family:inherit;
+  }
+
+  .news-panel{
+    margin-top:20px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px 20px 8px;
+  }
+  .news-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .news-title{
+    font-size:15px;
+    font-weight:700;
+  }
+  .news-sub{
+    font-size:11.5px;
+    color:var(--muted-2);
+  }
+  .news-cols{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:20px;
+  }
+  @media (max-width:900px){
+    .news-cols{grid-template-columns:1fr;}
+  }
+  .news-col-title{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:8px;
+  }
+  .news-items{min-height:20px;}
+  .news-item{
+    display:block;
+    padding:9px 0;
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+    color:var(--text);
+    text-decoration:none;
+    line-height:1.45;
+  }
+  .news-col .news-item:last-child{border-bottom:none;}
+  .news-item:hover{color:var(--amber);}
+  .news-source{
+    display:block;
+    font-size:10.5px;
+    color:var(--muted-2);
+    margin-top:3px;
+  }
+  .news-loading, .news-empty{
+    font-size:12px;
+    color:var(--muted-2);
+    padding:8px 0;
+  }
+
+  /* ---- AI Finans ---- */
+  .ai-form{
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+  }
+  .ai-input{
+    flex:1;
+    min-width:240px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:9px;
+    color:var(--text);
+    font-size:13.5px;
+    font-family:inherit;
+    padding:12px 14px;
+    resize:vertical;
+    min-height:46px;
+  }
+  .ai-input:focus{outline:none;border-color:#3a4453;}
+  .ai-input::placeholder{color:var(--muted-2);}
+  .ai-btn{
+    background:var(--amber);
+    border:none;
+    color:#1a1205;
+    font-size:13px;
+    font-weight:700;
+    font-family:inherit;
+    padding:12px 20px;
+    border-radius:9px;
+    cursor:pointer;
+    align-self:flex-start;
+  }
+  .ai-btn:hover{filter:brightness(1.07);}
+  .ai-btn:disabled{opacity:.5;cursor:default;}
+
+  .ai-chips{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .ai-chip{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-size:11.5px;
+    font-family:inherit;
+    padding:6px 11px;
+    border-radius:20px;
+    cursor:pointer;
+  }
+  .ai-chip:hover{color:var(--text);border-color:#3a4453;}
+
+  .ai-answer{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px 22px;
+    font-size:13.5px;
+    line-height:1.7;
+    white-space:pre-wrap;
+    min-height:60px;
+  }
+  .ai-answer:empty{display:none;}
+  .ai-answer h3{
+    font-size:14px;
+    margin:16px 0 8px;
+    color:var(--amber);
+  }
+  .ai-answer strong{color:#fff;}
+
+  .ai-score-row{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:14px 16px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    margin-bottom:16px;
+  }
+  .ai-score-num{
+    font-size:30px;
+    font-weight:800;
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .ai-score-num.good{color:var(--up);}
+  .ai-score-num.mid{color:var(--amber);}
+  .ai-score-num.bad{color:var(--down);}
+  .ai-score-meta{font-size:12px;color:var(--muted);}
+  .ai-score-verdict{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;}
+
+  .ai-setup{
+    background:#2a1f12;
+    border:1px solid #4a3319;
+    color:#f0b458;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:12.5px;
+    line-height:1.65;
+    margin-bottom:18px;
+  }
+  .ai-setup b{color:#ffd27a;}
+  .ai-setup code{
+    background:#1c150c;
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:11.5px;
+    word-break:break-all;
+  }
+  .ai-disclaimer{
+    font-size:11.5px;
+    color:var(--muted-2);
+    line-height:1.6;
+    margin-top:16px;
+  }
+  .ai-thinking{
+    color:var(--muted);
+    font-size:13px;
+    padding:8px 0;
+  }
+
+  /* ---- Kredi Ekle ---- */
+  .loan-add-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:6px;
+  }
+  .loan-file-label{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:12.5px;
+    font-family:inherit;
+    padding:10px 16px;
+    border-radius:9px;
+    cursor:pointer;
+  }
+  .loan-file-label:hover{border-color:#3a4453;}
+  .loan-file-name{font-size:12px;color:var(--muted);}
+  .loan-preview{
+    margin-top:14px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 16px;
+  }
+  .loan-preview-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    padding:5px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .loan-preview-row:last-child{border-bottom:none;}
+  .loan-preview-actions{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+  }
+  .loan-btn-save{
+    background:var(--up);
+    border:none;
+    color:#08220f;
+    font-weight:700;
+    font-size:12.5px;
+    padding:9px 16px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .loan-btn-cancel{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-size:12.5px;
+    padding:9px 16px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .loan-delete-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--down);
+    font-size:11px;
+    padding:4px 9px;
+    border-radius:6px;
+    cursor:pointer;
+    margin-left:auto;
+  }
+  .loan-delete-btn:hover{border-color:var(--down);}
+  .loan-card-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="layout">
+
+  <div class="sidebar">
+    <div class="nav-panel" id="navPanel">
+      <div class="nav-item active" data-tab="gunluk" onclick="switchTab('gunluk')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-5 3 3 5-7"/></svg>
+        <span>Günlük Makro Özet</span>
+      </div>
+      <div class="nav-item" data-tab="finansal" onclick="switchTab('finansal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+        <span>Güncel Finansal Durumum</span>
+      </div>
+      <div class="nav-item" data-tab="yatirim" onclick="switchTab('yatirim')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
+        <span>Yatırımlarım</span>
+      </div>
+      <div class="nav-item" data-tab="borclar" onclick="switchTab('borclar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        <span>Borçlarım</span>
+      </div>
+      <div class="nav-item" data-tab="ai" onclick="switchTab('ai')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg>
+        <span>AI Finans</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+
+  <!-- ================= TAB: GÜNLÜK MAKRO ÖZET ================= -->
+  <div class="tab-panel active" id="tab-gunluk">
+
+  <div class="file-warning" id="fileWarning">
+    <b>⚠ Bu dosyayı doğrudan bilgisayarından açtın (file://).</b> Tarayıcılar bu şekilde açılan sayfalarda internetten veri çekmeyi güvenlik gereği engeller, bu yüzden hiçbir kart/grafik/haber gelmez. Çözüm: dosyayı basit bir yerel sunucu üzerinden aç — örneğin klasörde terminalde <code>python3 -m http.server 8000</code> yazıp tarayıcıda <code>http://localhost:8000/piyasa-paneli.html</code> adresini aç, ya da dosyayı bir hosting'e (GitHub Pages, Netlify Drop vb.) yükle.
+  </div>
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>Günlük Özet</h1>
+      <p>Endeksler, faiz, döviz, emtia, kripto ve güncel haberler</p>
+    </div>
+    <div class="status">
+      <span id="statusDot" class="dot loading"></span>
+      <span id="statusText">Veriler alınıyor…</span>
+      <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M21 12a9 9 0 1 1-2.6-6.36M21 4v5h-5"/>
+        </svg>
+        Yenile
+      </button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="chart-panel" id="chartPanel">
+    <div class="chart-head">
+      <div class="chart-title-row">
+        <span class="chart-title" id="chartTitle">—</span>
+        <span class="chart-sub" id="chartSub"></span>
+      </div>
+      <div class="chart-controls">
+        <div class="period-toggle">
+          <button class="period-btn active" id="btnDaily" onclick="setPeriod('daily')">Günlük</button>
+          <button class="period-btn" id="btnWeekly" onclick="setPeriod('weekly')">Haftalık</button>
+        </div>
+      </div>
+    </div>
+    <div class="chart-body" id="chartBody">
+      <div class="chart-loading" id="chartLoading" style="display:none;">Grafik yükleniyor…</div>
+      <div class="chart-empty" id="chartEmpty" style="display:none;">Bu veri için geçmiş grafik alınamadı.</div>
+      <svg id="chartSvg" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <div class="news-panel">
+    <div class="news-head">
+      <span class="news-title">Güncel Haberler</span>
+      <span class="news-sub" id="newsUpdated"></span>
+    </div>
+    <div class="news-cols">
+      <div class="news-col">
+        <div class="news-col-title">Bitcoin</div>
+        <div class="news-items" id="news-btc"><div class="news-loading">Yükleniyor…</div></div>
+      </div>
+      <div class="news-col">
+        <div class="news-col-title">Altın</div>
+        <div class="news-items" id="news-gold"><div class="news-loading">Yükleniyor…</div></div>
+      </div>
+      <div class="news-col">
+        <div class="news-col-title">ABD Borsaları</div>
+        <div class="news-items" id="news-us"><div class="news-loading">Yükleniyor…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <b>Not:</b> Endeks, tahvil, döviz ve emtia verileri halka açık piyasa kaynaklarından; BTC/ETH verileri CoinGecko'dan canlı çekilir. Kaynağa anlık ulaşılamazsa kart üzerinde "gecikmeli" etiketiyle en son bilinen değer gösterilir. Haberler Google News'ten çekilir ve 5 dakikada bir yenilenir.
+  </div>
+
+  </div>
+  <!-- ================= /TAB: GÜNLÜK MAKRO ÖZET ================= -->
+
+  <!-- ================= TAB: GÜNCEL FİNANSAL DURUMUM ================= -->
+  <div class="tab-panel" id="tab-finansal">
+    <div class="page-head">
+      <h1>Güncel Finansal Durumum</h1>
+      <p>Excel verisi · 11.09.2026 itibarıyla</p>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Toplam Varlık</div>
+        <div class="summary-value">₺9.746.084</div>
+        <div class="summary-sub">Gayrimenkul, araç, arsa ve yatırımlar</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Toplam Borç</div>
+        <div class="summary-value neg">₺405.623</div>
+        <div class="summary-sub">Kredi, kredi kartı, KMH, nakit açığı</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Net Değer</div>
+        <div class="summary-value pos">₺9.340.461</div>
+        <div class="summary-sub">Varlık − Borç</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Yatırım / Borç Oranı</div>
+        <div class="summary-value">%25,9</div>
+        <div class="summary-sub">Yatırım toplamı ₺79.895</div>
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Aylık Nakit Akışı</div>
+      <div class="table-row">
+        <div><div class="r-label">Aylık Ev Geliri</div><div class="r-sub">Elif Maaş ₺100.000 · Faruk Gelir ₺0</div></div>
+        <div class="r-value pos">₺100.000</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Aylık Kredi Taksit Ödemesi</div><div class="r-sub">6 kredi toplamı</div></div>
+        <div class="r-value neg">₺81.683</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Nakit Hesap Bakiyesi</div></div>
+        <div class="r-value neg">-₺9.400</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Acil Durum Fonu Hedefi</div></div>
+        <div class="r-value muted">₺300.000</div>
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Varlık Dağılımı</div>
+      <div class="table-row">
+        <div class="r-label">Daire 2+1 (Gaziosmanpaşa)</div>
+        <div class="r-value">₺7.000.000</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label">Otomobil (Astra-H 2007)</div>
+        <div class="r-value">₺350.000</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Arsalar</div><div class="r-sub">Ayaş, İç Kale x2, Çankırı Çerkeş</div></div>
+        <div class="r-value">₺2.130.584</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label">Yatırımlar (Kripto + ETF + BIST)</div>
+        <div class="r-value">₺79.895</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label" style="font-weight:700;">Toplam Varlık</div>
+        <div class="r-value" style="color:var(--up);">₺9.746.084</div>
+      </div>
+    </div>
+  </div>
+  <!-- ================= /TAB: GÜNCEL FİNANSAL DURUMUM ================= -->
+
+  <!-- ================= TAB: YATIRIMLARIM ================= -->
+  <div class="tab-panel" id="tab-yatirim">
+    <div class="page-head">
+      <h1>Yatırımlarım</h1>
+      <p>Excel verisi · 11.09.2026 itibarıyla</p>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Toplam Yatırım</div>
+        <div class="summary-value">₺79.895</div>
+        <div class="summary-sub">Kripto + ABD ETF + BIST</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Yatırım / Borç Oranı</div>
+        <div class="summary-value">%25,9</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Portföy Getirisi</div>
+        <div class="summary-value muted" style="color:var(--muted);font-size:14px;">Excel'de veri yok</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Yaklaşan Hedef</div>
+        <div class="summary-value" style="font-size:14px;">Haz 2027 · Ort. $30.000</div>
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Portföy Dağılımı</div>
+      <div class="bar-row">
+        <div class="bar-head"><span class="name">ABD ETF</span><span class="val">₺52.320 · %65</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:65%;"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-head"><span class="name">Kripto</span><span class="val">₺20.075 · %25</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:25%;background:var(--up);"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-head"><span class="name">BIST (Elif)</span><span class="val">₺7.500 · %10</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:10%;background:#6C8EEF;"></div></div>
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Yatırım Hedefleri</div>
+      <div class="goal-item">
+        <div class="goal-owner">Ortak</div>
+        <div class="goal-text">Haziran 2027 — Yatırım portföyü ortalama 30 Bin Dolar</div>
+      </div>
+      <div class="goal-item">
+        <div class="goal-owner">Ortak</div>
+        <div class="goal-text">Mayıs 2028 — Yatırım portföyü ortalama 80 Bin Dolar</div>
+      </div>
+      <div class="goal-item">
+        <div class="goal-owner">Ortak</div>
+        <div class="goal-text">Ocak 2030 — Yatırım portföyü ortalama 200 Bin Dolar</div>
+      </div>
+      <div class="goal-item">
+        <div class="goal-owner">Faruk</div>
+        <div class="goal-text">Aralık 2026 — Borçların bitirilmiş olması</div>
+      </div>
+    </div>
+  </div>
+  <!-- ================= /TAB: YATIRIMLARIM ================= -->
+
+  <!-- ================= TAB: BORÇLARIM ================= -->
+  <div class="tab-panel" id="tab-borclar">
+    <div class="page-head">
+      <h1>Borçlarım</h1>
+      <p>Excel verisi · 11.09.2026 itibarıyla (Garanti kredisi hariç — o canlı hesaplanıyor)</p>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Toplam Borç</div>
+        <div class="summary-value neg" id="sum-toplam-borc">₺405.623</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Kredi (Bugün Kapatılırsa)</div>
+        <div class="summary-value" id="sum-kredi-bugun">₺228.239</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Kredi Kartı Borcu</div>
+        <div class="summary-value">₺125.510</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">KMH Borcu</div>
+        <div class="summary-value">₺42.474</div>
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Yeni Kredi Ekle</div>
+      <div class="loan-add-row">
+        <label class="loan-file-label" for="loanPdfInput">📄 Ödeme Planı PDF Seç</label>
+        <input type="file" id="loanPdfInput" accept="application/pdf" style="display:none;" onchange="onLoanPdfSelected(event)">
+        <span class="loan-file-name" id="loanFileName">Dosya seçilmedi</span>
+      </div>
+      <div id="loanExtractStatus"></div>
+      <div id="loanPreviewBox"></div>
+      <div class="ai-disclaimer" style="margin-top:10px;">
+        PDF, Cloudflare Worker üzerinden Claude'a gönderilip ödeme planı otomatik okunur. Kaydetmeden önce
+        çıkarılan rakamları mutlaka kontrol et — otomatik okuma hata yapabilir. Eklenen krediler yalnızca
+        bu tarayıcıda (localStorage) saklanır, başka cihaza taşınmaz.
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Kredilerim — Canlı Takip</div>
+      <div id="loans-live-container"></div>
+      <div class="card-note" style="margin-top:6px;">
+        Hesap yöntemi: kalan anapara × (aylık faiz oranı / 30) × geçen gün + %15 KKDF + %15 BSMV.
+        Garanti'de bu, bankanın kendi PDF'indeki "Bugünkü Kredi Borcu" rakamıyla (44.475,42 ₺) birebir
+        doğrulandı. Diğer kredilerde en son bildirdiğin kalan anapara referans alınıyor; bir sonraki
+        taksitten sonra bu rakamı tekrar güncellemen gerekir (otomatik ilerlemiyor).
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Kredi Detayları</div>
+      <div class="table-row">
+        <div><div class="r-label">Garanti %1,99 · canlı</div><div class="r-sub" id="loan-row-sub-garanti">Kalan taksit: —</div></div>
+        <div class="r-value" id="loan-row-value-garanti">—</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">On Bank %2,99 · canlı</div><div class="r-sub" id="loan-row-sub-onbank">Kalan taksit: —</div></div>
+        <div class="r-value" id="loan-row-value-onbank">—</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Enpara (10. gün) %0,00</div><div class="r-sub">Kalan taksit: 3</div></div>
+        <div class="r-value">₺25.500</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Vakıfbank (8. gün) %2,49</div><div class="r-sub">Kalan taksit: 1</div></div>
+        <div class="r-value">₺8.880</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Akbank %0,99 (Faruk)</div><div class="r-sub">Kalan taksit: 1</div></div>
+        <div class="r-value">₺25.614</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Akbank %0,99 (Elif)</div><div class="r-sub">Kalan taksit: 1</div></div>
+        <div class="r-value">₺25.614</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label" style="font-weight:700;">Bugün Kapatılırsa Toplam</div>
+        <div class="r-value" style="color:var(--down);" id="garanti-toplam-satiri">₺228.239</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label" style="font-weight:700;">Faizli Toplam Tutar</div><div class="r-sub">Vade sonuna kadar ödenecek toplam</div></div>
+        <div class="r-value muted">₺269.076</div>
+      </div>
+    </div>
+
+    <div class="section-panel">
+      <div class="section-title">Diğer Borçlar</div>
+      <div class="table-row">
+        <div class="r-label">Kredi Kartı (Akbank)</div>
+        <div class="r-value">₺125.510</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">KMH (Abim Euro Elden)</div></div>
+        <div class="r-value">₺42.474</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Nakit Hesap</div></div>
+        <div class="r-value neg">-₺9.400</div>
+      </div>
+      <div class="table-row">
+        <div><div class="r-label">Eylül Ödenmeyen Kredi Kartları</div><div class="r-sub">Vakıf ₺8.880 · Akbank ₺29.750 · Enpara ₺8.400</div></div>
+        <div class="r-value muted">₺47.030</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label">Borcun Bitcoin Karşılığı</div>
+        <div class="r-value muted">≈0,0611 BTC</div>
+      </div>
+    </div>
+  </div>
+  <!-- ================= /TAB: BORÇLARIM ================= -->
+
+  <!-- ================= TAB: AI FİNANS ================= -->
+  <div class="tab-panel" id="tab-ai">
+    <div class="page-head">
+      <h1>AI Finans</h1>
+      <p>Şirket, sektör ve piyasa sorularını güncel haber taramasıyla birlikte değerlendirir</p>
+    </div>
+
+    <div class="ai-setup" id="aiSetup">
+      <b>⚙ Kurulum gerekiyor.</b> AI özelliğinin çalışması için kendi Cloudflare Worker adresini aşağıdaki kod içinde tanımlaman gerekiyor: dosyada <code>AI_ENDPOINT</code> satırını bul ve Worker adresinle değiştir. API anahtarı Worker'ın içinde saklanır, bu sayfada görünmez.
+    </div>
+
+    <div class="ai-form">
+      <textarea class="ai-input" id="aiInput" rows="2" placeholder="Örn: ASELSAN'ı değerlendir — finansalları, sektör görünümü ve haber akışıyla birlikte skorla"></textarea>
+      <button class="ai-btn" id="aiBtn" onclick="askAI()">Değerlendir</button>
+    </div>
+
+    <div class="ai-chips">
+      <button class="ai-chip" onclick="fillAI('THYAO hissesini finansalları, sektör görünümü ve güncel haberleriyle değerlendir ve skorla')">THYAO değerlendir</button>
+      <button class="ai-chip" onclick="fillAI('NVIDIA (NVDA) için değerleme, büyüme ve risk analizi yap, skorla')">NVDA analizi</button>
+      <button class="ai-chip" onclick="fillAI('Fed faiz kararı öncesi altın ve tahvil piyasası için senaryo analizi yap')">Altın senaryoları</button>
+      <button class="ai-chip" onclick="fillAI('Bitcoin için mevcut makro koşullarda risk/getiri değerlendirmesi yap')">BTC makro görünüm</button>
+      <button class="ai-chip" onclick="fillAI('Savunma sanayi sektörünün 2026 görünümünü ve öne çıkan şirketleri analiz et')">Savunma sanayi</button>
+    </div>
+
+    <div id="aiScoreBox"></div>
+    <div class="ai-answer" id="aiAnswer"></div>
+
+    <div class="ai-disclaimer">
+      Bu bölüm bir analiz aracıdır, yatırım tavsiyesi değildir. Üretilen skorlar ve değerlendirmeler, modelin kamuya açık bilgi ve haber taramasına dayalı yorumudur; hata veya eksik içerebilir, kesin bir al/sat talimatı olarak okunmamalıdır. Yatırım kararlarını kendi araştırman ve gerekiyorsa lisanslı bir danışmanla birlikte vermelisin.
+    </div>
+  </div>
+  <!-- ================= /TAB: AI FİNANS ================= -->
+
+  </div>
+</div>
+</div>
+
+<script>
+const CARDS = [
+  { key:'sp500',  label:'S&P 500',      source:'yahoo',    symbol:'^GSPC',    fmt:'index',   fallback:{price:7637.70, chg:-0.47} },
+  { key:'ndx',    label:'NASDAQ 100',   source:'yahoo',    symbol:'^NDX',     fmt:'index',   fallback:{price:26256.66, chg:-0.62} },
+  { key:'dji',    label:'DOW JONES',    source:'yahoo',    symbol:'^DJI',     fmt:'index',   fallback:{price:52380.66, chg:-0.77} },
+  { key:'vix',    label:'VIX (KORKU ENDEKSİ)',  source:'yahoo',    symbol:'^VIX',     fmt:'index2',  fallback:{price:16.46, chg:4.71} },
+  { key:'us2y',   label:'2Y HAZİNE',    source:'fred',     symbol:'DGS2',     fmt:'yield',   fallback:{price:4.43, chg:0.04, bp:true} },
+  { key:'us10y',  label:'10Y HAZİNE',   source:'fred',     symbol:'DGS10',    fmt:'yield',   fallback:{price:4.83, chg:0.03, bp:true} },
+  { key:'dxy',    label:'DOLAR (DXY)',  source:'yahoo',    symbol:'DX-Y.NYB', fmt:'index2',  fallback:{price:98.80, chg:-0.02} },
+  { key:'btc',    label:'BİTCOİN',      source:'coingecko',symbol:'bitcoin',  fmt:'usd0',    fallback:{price:78170.59, chg:-0.15} },
+  { key:'eth',    label:'ETHEREUM',     source:'coingecko',symbol:'ethereum', fmt:'usd2',    fallback:{price:3120.40, chg:0.85} },
+  { key:'gold',   label:'ALTIN (ONS)',  source:'yahoo',    symbol:'GC=F',     fmt:'usd2',    fallback:{price:4455.20, chg:-0.12} },
+  { key:'brent',  label:'BRENT PETROL', source:'yahoo',    symbol:'BZ=F',     fmt:'usd2',    fallback:{price:101.60, chg:0.39} },
+  { key:'uranium',label:'URANYUM',      source:'yahoo',    symbol:'UX=F',     fmt:'usd2',    fallback:{price:78.50, chg:0.65} },
+];
+
+const grid = document.getElementById('grid');
+const state = {};
+
+function buildCards(){
+  CARDS.forEach(c=>{
+    const el = document.createElement('div');
+    el.className = 'card' + (c.key === 'vix' ? ' has-note' : '');
+    el.id = 'card-'+c.key;
+    el.innerHTML = `
+      <div class="card-label">
+        <span>${c.label}</span>
+        <span class="regime-badge" id="badge-${c.key}" style="display:none;"></span>
+        <span class="stale-tag" id="stale-${c.key}" style="display:none;">gecikmeli</span>
+      </div>
+      <div class="card-value skeleton" id="val-${c.key}">0</div>
+      <div class="card-change flat" id="chg-${c.key}"><span class="arrow">–</span><span>—</span></div>
+      <div class="card-note" id="note-${c.key}" style="display:none;"></div>
+    `;
+    el.addEventListener('click', ()=> openChart(c.key));
+    grid.appendChild(el);
+  });
+}
+
+// VIX seviyesine göre piyasa rejimi, rengi ve yorumu
+function vixRegime(vix, chgPct){
+  let key, label;
+  if(vix < 12){
+    key = 'calm';   label = 'AŞIRI SAKİN';
+  } else if(vix < 20){
+    key = 'normal'; label = 'NORMAL';
+  } else if(vix < 30){
+    key = 'fear';   label = 'KORKU';
+  } else {
+    key = 'panic';  label = 'AŞIRI KORKU';
+  }
+
+  const v = fmtNumber(vix, 2);
+  const yon = chgPct > 0.005 ? 'yükseldi' : (chgPct < -0.005 ? 'düştü' : 'yatay kaldı');
+  const oran = '%' + fmtNumber(Math.abs(chgPct), 1);
+  const hareket = (yon === 'yatay kaldı')
+    ? `VIX ${v}, dün yatay kaldı`
+    : `VIX ${v}, dün ${oran} ${yon}`;
+
+  let yorum;
+  if(key === 'calm'){
+    yorum = '12 eşiğinin altında aşırı rehavet var; koruma çok ucuz ama ters hareketlere karşı savunmasız bir zemin.';
+  } else if(key === 'normal'){
+    yorum = '20 eşiğinin altında panik yok, opsiyon koruması ucuz.';
+  } else if(key === 'fear'){
+    yorum = '20 eşiği aşıldı; piyasa tedirgin, koruma maliyeti artıyor ve oynaklık genişliyor.';
+  } else {
+    yorum = '30 üzerinde panik bölgesi; sert satış ve likidite baskısı işareti, koruma pahalı.';
+  }
+
+  return { key, label, note: `${hareket}; ${yorum}` };
+}
+
+function fmtNumber(n, decimals){
+  return n.toLocaleString('tr-TR', {minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+}
+
+function renderCard(cfg, price, chgPct, stale){
+  const cardEl = document.getElementById('card-'+cfg.key);
+  const valEl = document.getElementById('val-'+cfg.key);
+  const chgEl = document.getElementById('chg-'+cfg.key);
+  const staleEl = document.getElementById('stale-'+cfg.key);
+
+  valEl.classList.remove('skeleton');
+
+  let valueStr;
+  switch(cfg.fmt){
+    case 'index': valueStr = fmtNumber(price, 2); break;
+    case 'index2': valueStr = fmtNumber(price, 2); break;
+    case 'yield': valueStr = '%' + fmtNumber(price, 2); break;
+    case 'usd0': valueStr = fmtNumber(price, 2); break;
+    case 'usd2': valueStr = fmtNumber(price, 2); break;
+    default: valueStr = fmtNumber(price, 2);
+  }
+  valEl.textContent = valueStr;
+
+  const isBp = cfg.fallback.bp;
+  const dir = chgPct > 0.005 ? 'up' : (chgPct < -0.005 ? 'down' : 'flat');
+  cardEl.classList.remove('up','down');
+  if(dir!=='flat') cardEl.classList.add(dir);
+
+  chgEl.classList.remove('up','down','flat');
+  chgEl.classList.add(dir);
+  const arrow = dir==='up' ? '▲' : (dir==='down' ? '▼' : '–');
+  const sign = chgPct > 0 ? '+' : '';
+  const chgLabel = isBp
+    ? `${sign}${Math.round(chgPct*100)} bp`
+    : `${sign}%${fmtNumber(Math.abs(chgPct)===chgPct?chgPct:chgPct,2)}`;
+  chgEl.innerHTML = `<span class="arrow">${arrow}</span><span>${chgLabel}</span>`;
+
+  // VIX: rejim rozeti, renk ve açıklama notu
+  if(cfg.key === 'vix'){
+    const badgeEl = document.getElementById('badge-vix');
+    const noteEl = document.getElementById('note-vix');
+    const r = vixRegime(price, chgPct);
+
+    badgeEl.className = 'regime-badge ' + r.key;
+    badgeEl.textContent = r.label;
+    badgeEl.style.display = 'inline-block';
+
+    valEl.classList.remove('calm','normal','fear','panic');
+    valEl.classList.add(r.key);
+
+    noteEl.textContent = r.note;
+    noteEl.style.display = 'block';
+  }
+
+  staleEl.style.display = stale ? 'inline-block' : 'none';
+}
+
+async function fetchYahoo(symbol){
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
+  const res = await fetchWithFallback(url);
+  const data = await res.json();
+  const result = data.chart.result[0];
+  const meta = result.meta;
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose ?? meta.previousClose;
+  const chgPct = ((price - prevClose) / prevClose) * 100;
+  return { price, chgPct };
+}
+
+async function fetchFred(seriesId){
+  const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${seriesId}`;
+  const res = await fetchWithFallback(url);
+  const text = await res.text();
+  const lines = text.trim().split('\n').slice(1);
+  const clean = lines.filter(l => !l.trim().endsWith(',.') && l.trim().length>0);
+  const last = clean[clean.length-1].split(',');
+  const prev = clean[clean.length-2].split(',');
+  const price = parseFloat(last[1]);
+  const prevVal = parseFloat(prev[1]);
+  const chgPct = (price - prevVal) * 100; // basis points for a yield series
+  return { price, chgPct };
+}
+
+async function fetchCoingecko(ids){
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd&include_24hr_change=true`;
+  const res = await fetchWithTimeout(url);
+  if(!res.ok) throw new Error('coingecko fetch failed');
+  return res.json();
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+async function refreshCrypto(){
+  const cgData = await fetchCoingecko(['bitcoin','ethereum']);
+  CARDS.filter(c=>c.source==='coingecko').forEach(cfg=>{
+    const d = cgData[cfg.symbol];
+    if(d) renderCard(cfg, d.usd, d.usd_24h_change, false);
+  });
+}
+
+async function refreshMarketData(){
+  const dot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  dot.className = 'dot loading';
+  statusText.textContent = 'Veriler alınıyor…';
+
+  let anyError = false;
+  let lastErrorMsg = '';
+
+  try{
+    await refreshCrypto();
+  }catch(e){ anyError = true; lastErrorMsg = e.message || String(e); }
+
+  // Yahoo/FRED kaynaklı kartları aynı anda değil, aralıklı (kademeli) çekiyoruz —
+  // ücretsiz CORS proxy'leri eş zamanlı yoğun istekte otomatik engelleme yapabiliyor.
+  const marketCards = CARDS.filter(c => c.source === 'yahoo' || c.source === 'fred');
+  for(const cfg of marketCards){
+    try{
+      if(cfg.source === 'yahoo'){
+        const { price, chgPct } = await fetchYahoo(cfg.symbol);
+        renderCard(cfg, price, chgPct, false);
+      } else if(cfg.source === 'fred'){
+        const { price, chgPct } = await fetchFred(cfg.symbol);
+        renderCard(cfg, price, chgPct, false);
+      }
+    }catch(e){
+      anyError = true;
+      lastErrorMsg = e.message || String(e);
+      renderCard(cfg, cfg.fallback.price, cfg.fallback.chg, true);
+    }
+    await sleep(350); // istekler arasına kısa bir bekleme koyuyoruz
+  }
+
+  if(location.protocol === 'file:'){
+    document.getElementById('fileWarning').style.display = 'block';
+  }
+
+  if(anyError){
+    dot.className = 'dot err';
+    statusText.textContent = `Bazı veriler alınamadı (${lastErrorMsg}) · ` + new Date().toLocaleTimeString('tr-TR');
+  } else {
+    dot.className = 'dot';
+    statusText.textContent = 'Canlı · güncellendi ' + new Date().toLocaleTimeString('tr-TR');
+  }
+}
+
+async function refreshAll(){
+  await refreshMarketData();
+}
+
+function manualRefresh(){
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  refreshAll().finally(()=> setTimeout(()=>btn.classList.remove('spinning'), 500));
+}
+
+// ---------- Detay grafiği ----------
+let currentKey = null;
+let currentPeriod = 'daily';
+
+function openChart(key){
+  currentKey = key;
+  document.querySelectorAll('.card').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('card-'+key).classList.add('selected');
+
+  const cfg = CARDS.find(c=>c.key===key);
+  document.getElementById('chartTitle').textContent = cfg.label;
+  loadChart(cfg, currentPeriod);
+}
+
+function setPeriod(period){
+  currentPeriod = period;
+  document.getElementById('btnDaily').classList.toggle('active', period==='daily');
+  document.getElementById('btnWeekly').classList.toggle('active', period==='weekly');
+  if(currentKey){
+    const cfg = CARDS.find(c=>c.key===currentKey);
+    loadChart(cfg, period);
+  }
+}
+
+async function loadChart(cfg, period){
+  const loadingEl = document.getElementById('chartLoading');
+  const emptyEl = document.getElementById('chartEmpty');
+  const svgEl = document.getElementById('chartSvg');
+  const subEl = document.getElementById('chartSub');
+
+  svgEl.innerHTML = '';
+  emptyEl.style.display = 'none';
+  loadingEl.style.display = 'flex';
+  subEl.textContent = period==='daily' ? 'Son 30 gün · günlük' : 'Son 12 ay · haftalık';
+
+  try{
+    const points = await fetchHistory(cfg, period);
+    loadingEl.style.display = 'none';
+    if(!points || points.length < 2){
+      emptyEl.style.display = 'flex';
+      lastChartPoints = null;
+      return;
+    }
+    lastChartPoints = points;
+    drawChart(svgEl, points);
+  }catch(e){
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'flex';
+  }
+}
+
+async function fetchHistory(cfg, period){
+  if(cfg.source === 'yahoo'){
+    const interval = period === 'daily' ? '1d' : '1wk';
+    const range = period === 'daily' ? '1mo' : '1y';
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cfg.symbol)}?range=${range}&interval=${interval}`;
+    const res = await fetchWithFallback(url);
+    const data = await res.json();
+    const result = data.chart.result[0];
+    const ts = result.timestamp || [];
+    const closes = result.indicators.quote[0].close || [];
+    return ts.map((t,i)=>({ t: t*1000, v: closes[i] })).filter(p=>p.v!=null);
+  }
+
+  if(cfg.source === 'coingecko'){
+    const symbolMap = { bitcoin: 'BTCUSDT', ethereum: 'ETHUSDT' };
+    const symbol = symbolMap[cfg.symbol];
+    const interval = period === 'daily' ? '1d' : '1w';
+    const limit = period === 'daily' ? 30 : 52;
+    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+    const res = await fetchWithTimeout(url);
+    if(!res.ok) throw new Error('binance fetch failed');
+    const data = await res.json();
+    return data.map(k => ({ t: k[6], v: parseFloat(k[4]) }));
+  }
+
+  if(cfg.source === 'fred'){
+    const cosd = period === 'daily'
+      ? new Date(Date.now() - 45*24*3600*1000).toISOString().slice(0,10)
+      : new Date(Date.now() - 450*24*3600*1000).toISOString().slice(0,10);
+    const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${cfg.symbol}&cosd=${cosd}`;
+    const res = await fetchWithFallback(url);
+    const text = await res.text();
+    const lines = text.trim().split('\n').slice(1);
+    let pts = lines
+      .map(l=>l.split(','))
+      .filter(cols=> cols.length===2 && cols[1].trim() !== '.' && cols[1].trim() !== '')
+      .map(cols=>({ t: new Date(cols[0]).getTime(), v: parseFloat(cols[1]) }));
+    if(period === 'weekly'){
+      pts = pts.filter((_,i)=> i % 5 === 0);
+    }
+    return pts;
+  }
+
+  return [];
+}
+
+function drawChart(svgEl, points){
+  const box = svgEl.parentElement.getBoundingClientRect();
+  const W = Math.max(Math.round(box.width), 300);
+  const H = Math.max(Math.round(box.height), 160);
+  const PAD_L = 56, PAD_R = 14, PAD_T = 16, PAD_B = 24;
+  const vals = points.map(p=>p.v);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = (max - min) || 1;
+
+  const x = i => PAD_L + (i/(points.length-1)) * (W - PAD_L - PAD_R);
+  const y = v => PAD_T + (1 - (v - min)/range) * (H - PAD_T - PAD_B);
+
+  const up = points[points.length-1].v >= points[0].v;
+  const lineColor = up ? '#33C07C' : '#FF5C5C';
+  const fillColor = up ? 'rgba(51,192,124,0.12)' : 'rgba(255,92,92,0.12)';
+
+  const linePath = points.map((p,i)=> `${i===0?'M':'L'} ${x(i).toFixed(2)} ${y(p.v).toFixed(2)}`).join(' ');
+  const areaPath = `${linePath} L ${x(points.length-1).toFixed(2)} ${H-PAD_B} L ${x(0).toFixed(2)} ${H-PAD_B} Z`;
+
+  const fmtDate = (t)=> new Date(t).toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit'});
+
+  const gridLines = [0.25, 0.5, 0.75].map(frac=>{
+    const yy = PAD_T + frac*(H-PAD_T-PAD_B);
+    return `<line x1="${PAD_L}" y1="${yy}" x2="${W-PAD_R}" y2="${yy}" stroke="#1b212a" stroke-width="1"/>`;
+  }).join('');
+
+  svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svgEl.setAttribute('preserveAspectRatio', 'none');
+  svgEl.innerHTML = `
+    ${gridLines}
+    <path d="${areaPath}" fill="${fillColor}" stroke="none"/>
+    <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="1.8"/>
+    <text class="axis-label" x="${PAD_L}" y="${H-6}" text-anchor="start">${fmtDate(points[0].t)}</text>
+    <text class="axis-label" x="${W-PAD_R}" y="${H-6}" text-anchor="end">${fmtDate(points[points.length-1].t)}</text>
+    <text class="axis-label" x="${PAD_L-8}" y="${PAD_T+4}" text-anchor="end">${max.toLocaleString('tr-TR',{maximumFractionDigits:2})}</text>
+    <text class="axis-label" x="${PAD_L-8}" y="${H-PAD_B}" text-anchor="end">${min.toLocaleString('tr-TR',{maximumFractionDigits:2})}</text>
+  `;
+}
+
+let lastChartPoints = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(window._chartResizeTimer);
+  window._chartResizeTimer = setTimeout(()=>{
+    if(lastChartPoints){
+      drawChart(document.getElementById('chartSvg'), lastChartPoints);
+    }
+  }, 200);
+});
+
+// ---------- Güncel Haberler ----------
+const NEWS_FEEDS = [
+  { key:'btc',  query:'Bitcoin' },
+  { key:'gold', query:'Altın ons Fed' },
+  { key:'us',   query:'ABD borsa Wall Street S&P 500' },
+];
+
+// Kendi Cloudflare Worker adresin (en güvenilir kaynak — ilk sırada denenir).
+// Worker'ı kurduktan sonra aşağıdaki adresi kendi adresinle değiştir.
+const MY_WORKER = 'https://SENIN-WORKER-ADRESIN.workers.dev';
+
+const NEWS_PROXIES = [
+  MY_WORKER + '/proxy?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+].filter(p => !p.includes('SENIN-WORKER-ADRESIN'));
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+function fetchWithTimeout(url, ms = 7000){
+  const controller = new AbortController();
+  const timer = setTimeout(()=> controller.abort(), ms);
+  return fetch(url, { signal: controller.signal }).finally(()=> clearTimeout(timer));
+}
+
+async function fetchWithFallback(url){
+  let lastErr;
+  for(const proxy of NEWS_PROXIES){
+    try{
+      const res = await fetchWithTimeout(proxy + encodeURIComponent(url));
+      if(res.ok) return res;
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('all proxies failed');
+}
+
+async function fetchNews(query){
+  const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=tr&gl=TR&ceid=TR:tr`;
+
+  // 1) rss2json: RSS'i doğrudan JSON'a çevirir, CORS sorunu yaşamaz.
+  try{
+    const r2jUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+    const res = await fetchWithTimeout(r2jUrl);
+    const data = await res.json();
+    if(data && data.status === 'ok' && Array.isArray(data.items) && data.items.length){
+      return data.items.slice(0, 4).map(it => ({
+        title: (it.title || '').split(' - ').slice(0, -1).join(' - ') || it.title || '',
+        link: it.link || '#',
+        source: it.author || (it.title || '').split(' - ').pop() || '',
+      }));
+    }
+  }catch(e){ /* alttaki yönteme düş */ }
+
+  // 2) Yedek: ham RSS XML, proxy zinciri üzerinden
+  try{
+    const res = await fetchWithFallback(feedUrl);
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 4);
+    if(items.length){
+      return items.map(it => ({
+        title: it.querySelector('title')?.textContent || '',
+        link: it.querySelector('link')?.textContent || '#',
+        source: it.querySelector('source')?.textContent || '',
+      }));
+    }
+  }catch(e){ /* aşağıda boş döner */ }
+
+  return [];
+}
+
+function fallbackNewsLink(query){
+  const searchUrl = `https://news.google.com/search?q=${encodeURIComponent(query)}&hl=tr&gl=TR&ceid=TR:tr`;
+  return `
+    <a class="news-item" href="${searchUrl}" target="_blank" rel="noopener">
+      Güncel haberleri görüntülemek için tıklayın
+      <span class="news-source">Google News</span>
+    </a>
+  `;
+}
+
+async function loadNews(){
+  await Promise.all(NEWS_FEEDS.map(async feed=>{
+    const container = document.getElementById('news-'+feed.key);
+    try{
+      const items = await fetchNews(feed.query);
+      if(!items.length){
+        container.innerHTML = fallbackNewsLink(feed.query);
+        return;
+      }
+      container.innerHTML = items.map(it => `
+        <a class="news-item" href="${it.link}" target="_blank" rel="noopener">
+          ${escapeHtml(it.title)}
+          <span class="news-source">${escapeHtml(it.source)}</span>
+        </a>
+      `).join('');
+    }catch(e){
+      container.innerHTML = fallbackNewsLink(feed.query);
+    }
+  }));
+  document.getElementById('newsUpdated').textContent = 'güncellendi ' + new Date().toLocaleTimeString('tr-TR');
+}
+
+// ---------- AI Finans ----------
+// AI uç noktası — yukarıdaki MY_WORKER adresini tanımladığında otomatik çalışır.
+const AI_ENDPOINT = MY_WORKER + '/ai';
+
+function fillAI(text){
+  document.getElementById('aiInput').value = text;
+  document.getElementById('aiInput').focus();
+}
+
+function renderScore(score, verdict){
+  const box = document.getElementById('aiScoreBox');
+  if(score == null){ box.innerHTML = ''; return; }
+  const cls = score >= 70 ? 'good' : (score >= 45 ? 'mid' : 'bad');
+  box.innerHTML = `
+    <div class="ai-score-row">
+      <div class="ai-score-num ${cls}">${score}<span style="font-size:14px;color:var(--muted-2);">/100</span></div>
+      <div>
+        <div class="ai-score-verdict">${escapeHtml(verdict || '')}</div>
+        <div class="ai-score-meta">Modelin kamuya açık bilgi ve haber taramasına dayalı değerlendirmesi · yatırım tavsiyesi değildir</div>
+      </div>
+    </div>
+  `;
+}
+
+function formatAIText(text){
+  // Basit markdown: **kalın** ve ## başlık
+  return escapeHtml(text)
+    .replace(/^##\s*(.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+const AI_SYSTEM_PROMPT = `Sen bir finans ve piyasa analiz asistanısın. Türkçe yanıt ver.
+
+Bir şirket, varlık veya sektör sorulduğunda şu yapıda analiz yap:
+
+## Özet
+Kısa durum tespiti (2-3 cümle).
+
+## Finansal Görünüm
+Bilinen finansal veriler: büyüme, kârlılık, borçluluk, marjlar. Rakam biliyorsan ver, bilmiyorsan "güncel veriye bakılmalı" de — uydurma.
+
+## Değerleme
+Pahalı/ucuz/makul tartışması. F/K, PD/DD gibi çarpanlar biliniyorsa belirt. Fiyatlanmış beklentiler nedir?
+
+## Sektör ve Haber Akışı
+Sektörün genel gidişatı, düzenleyici/jeopolitik faktörler, öne çıkan son gelişmeler.
+
+## Riskler
+En az 3 somut risk maddesi.
+
+## Skor
+SKOR: [0-100 arası bir sayı]
+KARAR: [Cazip / Makul / Temkinli / Riskli] — tek kelimelik etiket
+Ardından skorun gerekçesini 2-3 cümleyle açıkla.
+
+Kurallar:
+- Emin olmadığın rakamı uydurma; bilgin eskimiş olabileceğini belirt.
+- Kesin al/sat emri verme; senaryo ve olasılık dilinde konuş.
+- Dengeli ol: hem yükseliş hem düşüş argümanını sun.
+- Yanıtın sonunda bunun yatırım tavsiyesi olmadığını bir cümleyle hatırlat.`;
+
+async function askAI(){
+  const input = document.getElementById('aiInput');
+  const answerEl = document.getElementById('aiAnswer');
+  const btn = document.getElementById('aiBtn');
+  const question = input.value.trim();
+  if(!question) return;
+
+  if(AI_ENDPOINT.includes('SENIN-WORKER-ADRESIN')){
+    answerEl.innerHTML = '<span style="color:var(--amber);">AI uç noktası henüz tanımlanmamış. Dosyadaki AI_ENDPOINT satırını kendi Cloudflare Worker adresinle değiştirmen gerekiyor.</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  renderScore(null);
+  answerEl.innerHTML = '<div class="ai-thinking">Analiz ediliyor, haberler taranıyor…</div>';
+
+  try{
+    const res = await fetch(AI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: AI_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: question }],
+      }),
+    });
+
+    if(!res.ok) throw new Error('AI isteği başarısız (' + res.status + ')');
+    const data = await res.json();
+
+    const text = (data.content || [])
+      .map(b => b.type === 'text' ? b.text : '')
+      .filter(Boolean)
+      .join('\n');
+
+    if(!text) throw new Error('Boş yanıt döndü');
+
+    // Skor ve kararı ayıkla
+    const scoreMatch = text.match(/SKOR:\s*\**\s*(\d{1,3})/i);
+    const verdictMatch = text.match(/KARAR:\s*\**\s*([^\n*]+)/i);
+    const score = scoreMatch ? Math.min(100, parseInt(scoreMatch[1], 10)) : null;
+    const verdict = verdictMatch ? verdictMatch[1].trim().replace(/^[—–-]\s*/, '') : '';
+
+    renderScore(score, verdict);
+    answerEl.innerHTML = formatAIText(text);
+  }catch(e){
+    renderScore(null);
+    answerEl.innerHTML = '<span style="color:var(--down);">Analiz alınamadı: ' + escapeHtml(e.message || String(e)) + '</span>';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+// Enter ile gönder (Shift+Enter yeni satır)
+document.getElementById('aiInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    askAI();
+  }
+});
+
+if(!AI_ENDPOINT.includes('SENIN-WORKER-ADRESIN')){
+  document.getElementById('aiSetup').style.display = 'none';
+}
+
+// ---------- Kredilerim — canlı erken kapama hesaplayıcı ----------
+// Ortak formül: kalan anapara × (aylık faiz oranı / 30) × geçen gün + %15 KKDF + %15 BSMV.
+// KKDF ve BSMV oranları (%15/%15) tüketici kredilerinde Türkiye'de yasal/standart orandır;
+// Garanti'de bu, bankanın PDF'indeki "Bugünkü Kredi Borcu" (44.475,42 ₺) ile tam eşleşerek doğrulandı.
+//
+// İki mod var:
+//  - 'schedule': tüm ödeme planı bilinen krediler (ör. Garanti) — taban tarih/anapara otomatik ilerler.
+//  - 'anchor'  : tek bir referans nokta bilinen krediler (ör. On Bank) — taban tarih/anapara sabittir,
+//                bir sonraki ödemeden sonra kullanıcı tarafından elle güncellenmesi gerekir.
+const ONBANK_SIGORTA_KATSAYISI = 86566.45 / 86342.70; // ≈ 1.002591 — bkz. yukarıdaki not
+
+const LOANS = [
+  // On Bank kredisinde taksit dökümünden hesaplanan "saf" (sigortasız) tutar ile bankanın bildirdiği
+  // gerçek kalan anapara arasında ₺223,75 (≈%0,2591) fark var — muhtemelen sigorta primi.
+  // Referans: ONBANK_SIGORTA_KATSAYISI = bankaRakami / safRakam = 86566.45 / 86342.70
+  {
+    id: 'garanti',
+    ad: 'Garanti BBVA',
+    faizOraniAylik: 1.99,
+    kkdfOrani: 15,
+    bsmvOrani: 15,
+    mode: 'schedule',
+    kaynakNotu: `Garanti BBVA'nın 19.09.2026 tarihli ödeme planı PDF'i — "Bugünkü Kredi Borcu" (44.475,42 ₺) ile tam eşleşerek doğrulandı.`,
+    schedule: [
+      { tarih:'2026-04-15', kalanAnapara:48854.76 },
+      { tarih:'2026-05-05', kalanAnapara:47582.32 },
+      { tarih:'2026-06-01', kalanAnapara:46576.51 },
+      { tarih:'2026-07-07', kalanAnapara:45893.38 },
+      { tarih:'2026-08-21', kalanAnapara:45483.42 },
+      { tarih:'2026-09-15', kalanAnapara:44322.54 },
+      { tarih:'2026-10-23', kalanAnapara:43508.99 },
+      { tarih:'2026-11-23', kalanAnapara:42483.29 },
+      { tarih:'2026-12-23', kalanAnapara:41431.06 },
+      { tarih:'2027-01-23', kalanAnapara:40351.61 },
+      { tarih:'2027-02-23', kalanAnapara:39244.24 },
+      { tarih:'2027-03-23', kalanAnapara:38108.21 },
+      { tarih:'2027-04-23', kalanAnapara:36942.79 },
+      { tarih:'2027-05-23', kalanAnapara:35747.22 },
+      { tarih:'2027-06-23', kalanAnapara:34520.74 },
+      { tarih:'2027-07-23', kalanAnapara:33262.51 },
+      { tarih:'2027-08-23', kalanAnapara:31971.74 },
+      { tarih:'2027-09-23', kalanAnapara:30647.59 },
+      { tarih:'2027-10-23', kalanAnapara:29289.17 },
+      { tarih:'2027-11-23', kalanAnapara:27895.61 },
+      { tarih:'2027-12-23', kalanAnapara:26466.00 },
+      { tarih:'2028-01-23', kalanAnapara:24999.40 },
+      { tarih:'2028-02-23', kalanAnapara:23494.86 },
+      { tarih:'2028-03-23', kalanAnapara:21951.40 },
+      { tarih:'2028-04-23', kalanAnapara:20368.00 },
+      { tarih:'2028-05-23', kalanAnapara:18743.65 },
+      { tarih:'2028-06-23', kalanAnapara:17077.28 },
+      { tarih:'2028-07-23', kalanAnapara:15367.81 },
+      { tarih:'2028-08-23', kalanAnapara:13614.10 },
+      { tarih:'2028-09-23', kalanAnapara:11815.03 },
+      { tarih:'2028-10-23', kalanAnapara:9969.42 },
+      { tarih:'2028-11-23', kalanAnapara:8076.06 },
+      { tarih:'2028-12-23', kalanAnapara:6133.72 },
+      { tarih:'2029-01-23', kalanAnapara:4141.13 },
+      { tarih:'2029-02-23', kalanAnapara:2096.99 },
+      { tarih:'2029-03-23', kalanAnapara:0.00 },
+    ],
+  },
+  {
+    id: 'onbank',
+    ad: 'On Bank',
+    faizOraniAylik: 2.99,
+    kkdfOrani: 15,
+    bsmvOrani: 15,
+    mode: 'anchor',
+    tabanTarih: '2026-09-17',
+    // Not: 1. ve 2. taksit dökümünden (anapara+faiz+KKDF+BSMV) zincirleme hesaplanan "saf" kalan
+    // anapara ₺86.342,70 çıkıyor; bankanın bildirdiği gerçek rakam ise ₺86.566,45. Aradaki ₺223,75
+    // (≈%0,2591) fark muhtemelen taksitlere dahil bir sigorta priminden kaynaklanıyor — taksit
+    // dökümünde ayrı bir kalem olarak görünmüyor. Katsayı = 86566.45/86342.70 = 1.002591.
+    // Kullanıcı talimatıyla gerçek banka rakamı (₺86.566,45) taban alındı.
+    kalanAnaparaTaban: 86566.45,
+    kalanTaksitSayisi: 10,
+    kaynakNotu: `Kullanıcı beyanı: 17.09.2026'da ödenen taksitten sonra kalan anapara ₺86.566,45, 10 taksit kaldı. Taksit dökümünden (anapara+faiz) hesaplanan "saf" tutar ₺86.342,70 çıkıyor; ₺223,75'lik fark muhtemelen sigorta primi — banka rakamı taban alındı (katsayı ≈1,002591). Bir sonraki ödemeden (17.10.2026) sonra bu rakamın tekrar girilmesi gerekir.`,
+  },
+];
+
+function loanGuncelBorc(loan, now = new Date()){
+  const bugun = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // saat bilgisini at, sadece takvim günü
+  let tabanTarih, kalanAnapara, kalanTaksit;
+
+  if(loan.mode === 'schedule'){
+    const sch = loan.schedule;
+    let baseIdx = -1;
+    for(let i=0;i<sch.length;i++){
+      if(new Date(sch[i].tarih + 'T00:00:00') <= bugun) baseIdx = i; else break;
+    }
+    if(baseIdx === -1) return null;
+    tabanTarih = sch[baseIdx].tarih;
+    kalanAnapara = sch[baseIdx].kalanAnapara;
+    kalanTaksit = sch.length - (baseIdx + 1);
+  } else { // 'anchor'
+    tabanTarih = loan.tabanTarih;
+    kalanAnapara = loan.kalanAnaparaTaban;
+    kalanTaksit = loan.kalanTaksitSayisi;
+  }
+
+  const tabanDate = new Date(tabanTarih + 'T00:00:00');
+  const gun = Math.max(0, Math.round((bugun - tabanDate) / 86400000));
+  const gunlukOran = loan.faizOraniAylik / 100 / 30;
+  const faiz = kalanAnapara * gunlukOran * gun;
+  const fon = faiz * (loan.kkdfOrani / 100);
+  const vergi = faiz * (loan.bsmvOrani / 100);
+  const toplam = kalanAnapara + faiz + fon + vergi;
+
+  return { kalanAnapara, gun, faiz, fon, vergi, toplam, tabanTarih, kalanTaksit };
+}
+
+const OTHER_LOANS_STATIC = 25500 + 8880 + 25614 + 25614; // Enpara + Vakıf + Akbank x2 (henüz statik)
+const OTHER_DEBT_STATIC = 125510 + 42474 + 9400; // Kredi Kartı + KMH + Nakit (mutlak)
+
+// ---------- Kullanıcının eklediği krediler (tarayıcı localStorage'ı) ----------
+const CUSTOM_LOANS_KEY = 'ft_custom_loans_v1';
+
+function loadCustomLoans(){
+  try{
+    const raw = localStorage.getItem(CUSTOM_LOANS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+
+function saveCustomLoans(list){
+  try{ localStorage.setItem(CUSTOM_LOANS_KEY, JSON.stringify(list)); }catch(e){ /* yok say */ }
+}
+
+function getAllLoans(){
+  return LOANS.concat(loadCustomLoans());
+}
+
+function deleteCustomLoan(id){
+  const list = loadCustomLoans().filter(l => l.id !== id);
+  saveCustomLoans(list);
+  updateGarantiLive();
+}
+
+function updateGarantiLive(){
+  const container = document.getElementById('loans-live-container');
+  container.innerHTML = '';
+  let liveToplam = 0;
+
+  getAllLoans().forEach(loan => {
+    const r = loanGuncelBorc(loan);
+
+    const rowEl = document.getElementById('loan-row-value-' + loan.id);
+    const subEl = document.getElementById('loan-row-sub-' + loan.id);
+
+    if(!r){
+      if(rowEl) rowEl.textContent = '—';
+      if(subEl) subEl.textContent = 'İlk taksit tarihi henüz gelmedi';
+      return;
+    }
+
+    liveToplam += r.toplam;
+
+    if(rowEl) rowEl.textContent = '₺' + fmtNumber(r.toplam, 0);
+    if(subEl) subEl.textContent = `Kalan taksit: ${r.kalanTaksit} · ${r.gun} gün işlemiş faiz`;
+
+    const block = document.createElement('div');
+    block.style.marginBottom = '18px';
+    block.innerHTML = `
+      <div class="ai-score-row loan-card-head" style="margin-bottom:10px;">
+        <div class="ai-score-num mid" style="font-size:24px;">₺${fmtNumber(r.toplam, 2)}</div>
+        <div>
+          <div class="ai-score-verdict">${escapeHtml(loan.ad)} — bugün kapatılırsa</div>
+          <div class="ai-score-meta">${fmtNumber(r.kalanAnapara,2)} ₺ kalan anapara · ${r.tabanTarih.split('-').reverse().join('.')} tarihinden bu yana ${r.gun} gün</div>
+        </div>
+        ${loan.custom ? `<button class="loan-delete-btn" onclick="deleteCustomLoan('${loan.id}')">Sil</button>` : ''}
+      </div>
+      <div class="table-row">
+        <div class="r-label">İşlemiş Faiz (${r.gun} gün × aylık %${loan.faizOraniAylik}/30)</div>
+        <div class="r-value">₺${fmtNumber(r.faiz, 2)}</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label">KKDF (Fon) — Faizin %${loan.kkdfOrani}'i</div>
+        <div class="r-value muted">₺${fmtNumber(r.fon, 2)}</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label">BSMV (Vergi) — Faizin %${loan.bsmvOrani}'i</div>
+        <div class="r-value muted">₺${fmtNumber(r.vergi, 2)}</div>
+      </div>
+      <div class="table-row">
+        <div class="r-label">Kalan Taksit Sayısı</div>
+        <div class="r-value muted">${r.kalanTaksit}</div>
+      </div>
+      <div class="card-note">${escapeHtml(loan.kaynakNotu || '')}</div>
+    `;
+    container.appendChild(block);
+  });
+
+  const krediBugun = OTHER_LOANS_STATIC + liveToplam;
+  const toplamBorc = krediBugun + OTHER_DEBT_STATIC;
+  document.getElementById('sum-kredi-bugun').textContent = '₺' + fmtNumber(krediBugun, 0);
+  document.getElementById('sum-toplam-borc').textContent = '₺' + fmtNumber(toplamBorc, 0);
+  document.getElementById('garanti-toplam-satiri').textContent = '₺' + fmtNumber(krediBugun, 0);
+}
+
+// ---------- PDF'ten kredi ekleme ----------
+let pendingExtractedLoan = null;
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function onLoanPdfSelected(event){
+  const file = event.target.files[0];
+  const nameEl = document.getElementById('loanFileName');
+  const statusEl = document.getElementById('loanExtractStatus');
+  const previewEl = document.getElementById('loanPreviewBox');
+  previewEl.innerHTML = '';
+  pendingExtractedLoan = null;
+
+  if(!file){ nameEl.textContent = 'Dosya seçilmedi'; return; }
+  nameEl.textContent = file.name;
+
+  if(AI_ENDPOINT.includes('SENIN-WORKER-ADRESIN')){
+    statusEl.innerHTML = '<div class="ai-thinking" style="color:var(--amber);">AI uç noktası tanımlanmamış — önce MY_WORKER adresini ayarla.</div>';
+    return;
+  }
+
+  statusEl.innerHTML = '<div class="ai-thinking">PDF okunuyor ve ödeme planı analiz ediliyor…</div>';
+
+  try{
+    const base64 = await fileToBase64(file);
+    const res = await fetch(MY_WORKER + '/extract-loan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdfBase64: base64, mediaType: file.type || 'application/pdf' }),
+    });
+    const data = await res.json();
+
+    if(!res.ok || data.error){
+      statusEl.innerHTML = '<div style="color:var(--down);font-size:12.5px;">Okunamadı: ' + escapeHtml(data.error || ('HTTP ' + res.status)) + '</div>';
+      return;
+    }
+    if(data.hata){
+      statusEl.innerHTML = '<div style="color:var(--down);font-size:12.5px;">' + escapeHtml(data.hata) + '</div>';
+      return;
+    }
+    if(!Array.isArray(data.schedule) || data.schedule.length < 1){
+      statusEl.innerHTML = '<div style="color:var(--down);font-size:12.5px;">Ödeme planı tablosu bulunamadı — belgeyi kontrol et.</div>';
+      return;
+    }
+
+    pendingExtractedLoan = data;
+    statusEl.innerHTML = '';
+    renderLoanPreview(data);
+  }catch(e){
+    statusEl.innerHTML = '<div style="color:var(--down);font-size:12.5px;">Hata: ' + escapeHtml(e.message || String(e)) + '</div>';
+  }
+}
+
+function renderLoanPreview(data){
+  const previewEl = document.getElementById('loanPreviewBox');
+  const ilkSatir = data.schedule[0];
+  const sonSatir = data.schedule[data.schedule.length - 1];
+
+  let dogrulamaHtml = '';
+  if(data.dogrulamaTutari != null && data.dogrulamaTarihi){
+    dogrulamaHtml = `
+      <div class="loan-preview-row">
+        <span class="r-label">Belgedeki doğrulama tutarı</span>
+        <span>₺${fmtNumber(data.dogrulamaTutari, 2)} (${data.dogrulamaTarihi.split('-').reverse().join('.')})</span>
+      </div>`;
+  }
+
+  previewEl.innerHTML = `
+    <div class="loan-preview">
+      <div class="loan-preview-row"><span class="r-label">Banka</span><span>${escapeHtml(data.banka || '—')}</span></div>
+      <div class="loan-preview-row"><span class="r-label">Aylık Faiz Oranı</span><span>%${data.faizOraniAylik ?? '—'}</span></div>
+      <div class="loan-preview-row"><span class="r-label">KKDF / BSMV</span><span>%${data.kkdfOrani ?? '—'} / %${data.bsmvOrani ?? '—'}</span></div>
+      <div class="loan-preview-row"><span class="r-label">Orijinal Anapara</span><span>${data.orijinalAnapara != null ? '₺'+fmtNumber(data.orijinalAnapara,2) : '—'}</span></div>
+      <div class="loan-preview-row"><span class="r-label">Ödeme Planı Satır Sayısı</span><span>${data.schedule.length}</span></div>
+      <div class="loan-preview-row"><span class="r-label">İlk Satır</span><span>${ilkSatir.tarih.split('-').reverse().join('.')} · ₺${fmtNumber(ilkSatir.kalanAnapara,2)}</span></div>
+      <div class="loan-preview-row"><span class="r-label">Son Satır</span><span>${sonSatir.tarih.split('-').reverse().join('.')} · ₺${fmtNumber(sonSatir.kalanAnapara,2)}</span></div>
+      ${dogrulamaHtml}
+      <div class="loan-preview-actions">
+        <button class="loan-btn-save" onclick="saveExtractedLoan()">✓ Doğru, Kaydet</button>
+        <button class="loan-btn-cancel" onclick="cancelLoanPreview()">İptal</button>
+      </div>
+    </div>
+  `;
+}
+
+function cancelLoanPreview(){
+  pendingExtractedLoan = null;
+  document.getElementById('loanPreviewBox').innerHTML = '';
+  document.getElementById('loanPdfInput').value = '';
+  document.getElementById('loanFileName').textContent = 'Dosya seçilmedi';
+}
+
+function saveExtractedLoan(){
+  if(!pendingExtractedLoan) return;
+  const data = pendingExtractedLoan;
+
+  const newLoan = {
+    id: 'custom-' + Date.now(),
+    ad: data.banka || 'Adsız Kredi',
+    faizOraniAylik: data.faizOraniAylik,
+    kkdfOrani: data.kkdfOrani ?? 15,
+    bsmvOrani: data.bsmvOrani ?? 15,
+    mode: 'schedule',
+    schedule: data.schedule,
+    custom: true,
+    kaynakNotu: `PDF'ten otomatik çıkarıldı (Claude ile okundu, kullanıcı onayıyla kaydedildi).` +
+      (data.dogrulamaTutari != null ? ` Belgedeki doğrulama tutarı: ₺${fmtNumber(data.dogrulamaTutari,2)} (${(data.dogrulamaTarihi||'').split('-').reverse().join('.')})` : ''),
+  };
+
+  const list = loadCustomLoans();
+  list.push(newLoan);
+  saveCustomLoans(list);
+
+  cancelLoanPreview();
+  updateGarantiLive();
+}
+
+// ---------- Sekme geçişi ----------
+function switchTab(tabId){
+  document.querySelectorAll('.tab-panel').forEach(el=> el.classList.remove('active'));
+  document.getElementById('tab-'+tabId).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el=> el.classList.toggle('active', el.dataset.tab === tabId));
+}
+
+buildCards();
+updateGarantiLive();
+if(location.protocol === 'file:'){
+  document.getElementById('fileWarning').style.display = 'block';
+}
+refreshAll();
+setInterval(refreshCrypto, 10000);
+setInterval(refreshAll, 45000);
+loadNews();
+setInterval(loadNews, 300000);
+openChart('btc');
+</script>
+</body>
+</html>
